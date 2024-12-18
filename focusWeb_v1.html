@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Traffic Control</title>
+    <style>
+        /* Material Design Dark Theme */
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            transition: background-color 0.5s;
+            margin: 0;
+            padding: 20px;
+        }
+
+        input, button, select {
+            margin: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #1f1f1f;
+            color: #ffffff;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: disc;
+            margin: 20px auto;
+            padding: 0;
+            max-width: 300px;
+            text-align: left;
+        }
+
+        li {
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        li.completed {
+            text-decoration: line-through;
+            color: #757575;
+        }
+
+        .subtitle {
+            font-size: 0.9em;
+            color: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Attention Traffic Control</h1>
+    <p class="subtitle">Tasks only stay in session</p>
+
+    <select id="soundSelect">
+        <option value="mute">Mute</option>
+        <option value="bell.mp3">Bell</option>
+        <option value="chirp.mp3">Chirp</option>
+        <option value="intercom.mp3">Intercom</option>
+    </select>
+
+    <input type="number" id="minutesInput" placeholder="Enter minutes for each color">
+    <button id="cycleButton" onclick="toggleCycle()">Start Cycle</button>
+
+    <br>
+
+    <input type="text" id="taskInput" placeholder="Enter a task">
+    <button onclick="addTask()">Add Task</button>
+    <button onclick="exportTasks()">Export Tasks</button>
+
+    <ul id="taskList"></ul>
+
+    <audio id="rainbowSound">
+        <source src="chirp.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        const colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"];
+        let index = 0;
+        let interval = null;
+
+        function toggleCycle() {
+            const button = document.getElementById("cycleButton");
+            if (interval === null) {
+                startCycle();
+                button.textContent = "Stop Cycle";
+            } else {
+                stopCycle();
+                button.textContent = "Start Cycle";
+            }
+        }
+
+        function startCycle() {
+            const minutes = document.getElementById("minutesInput").value;
+            if (minutes > 0) {
+                changeColorAndPlaySound();
+                interval = setInterval(changeColorAndPlaySound, minutes * 60000);
+            } else {
+                alert("Please enter a positive number.");
+            }
+        }
+
+        function stopCycle() {
+            clearInterval(interval);
+            interval = null;
+            document.body.style.backgroundColor = "#121212"; // Reset to default
+        }
+
+        function changeColorAndPlaySound() {
+            index = (index + 1) % colors.length;
+            document.body.style.backgroundColor = colors[index];
+
+            const soundFile = document.getElementById("soundSelect").value;
+            const audio = document.getElementById("rainbowSound");
+            if (soundFile !== "mute") {
+                audio.src = soundFile;
+                audio.currentTime = 0;
+                audio.play();
+            }
+        }
+
+        function addTask() {
+            const taskInput = document.getElementById("taskInput");
+            const taskList = document.getElementById("taskList");
+            const task = taskInput.value.trim();
+
+            if (task) {
+                const li = document.createElement("li");
+                li.textContent = task;
+                li.onclick = () => {
+                    li.classList.toggle("completed");
+                };
+                taskList.appendChild(li);
+                taskInput.value = "";
+            } else {
+                alert("Please enter a task.");
+            }
+        }
+
+        function exportTasks() {
+            const taskList = document.getElementById("taskList");
+            const tasks = Array.from(taskList.children).map(li => li.textContent);
+            if (tasks.length === 0) {
+                alert("No tasks to export.");
+                return;
+            }
+
+            const date = new Date();
+            const timestamp = date.toISOString().replace(/[:.-]/g, "");
+            const filename = `tasks_${timestamp}.txt`;
+
+            const blob = new Blob([tasks.join("\n")], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+
+</body>
+</html>
