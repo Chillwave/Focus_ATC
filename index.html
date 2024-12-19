@@ -11,9 +11,10 @@
             color: #ffffff;
             font-family: 'Roboto', sans-serif;
             text-align: center;
-            transition: background-color 0.5s;
+            transition: background-color 0.5s, color 0.5s;
             margin: 0;
             padding: 20px;
+            overflow-x: hidden;
         }
 
         input, button, select {
@@ -23,6 +24,8 @@
             border-radius: 4px;
             background-color: #1f1f1f;
             color: #ffffff;
+            width: calc(100% - 42px); /* Adjust for margin and padding */
+            max-width: 300px;
         }
 
         button {
@@ -51,7 +54,48 @@
             font-size: 0.9em;
             color: #a8a8a8;
         }
+
+        #footer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: calc(100% - 20px);
+            font-size: 0.75em;
+            color: #aaaaaa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #watermark,
+        #howToUseButton {
+            color: #aaaaaa;
+        }
+
+        #howToUseContent {
+            display: none;
+            color: #c0c0c0;
+            text-align: left;
+            max-width: 600px;
+            margin: 40px auto;
+        }
+
+        #howToUseContent h3 {
+            margin-top: 20px;
+        }
+
+        @media (min-width: 400px) {
+            body {
+                padding: 40px;
+            }
+        }
     </style>
+    <script>
+        function toggleVisibility(id) {
+            const element = document.getElementById(id);
+            element.style.display = element.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
 </head>
 <body>
 
@@ -65,26 +109,70 @@
         <option value="intercom.mp3">Intercom</option>
     </select>
 
-    <input type="number" id="minutesInput" placeholder="Enter minutes for each color">
+    <input type="number" id="minutesInput" placeholder="Enter interval in minutes">
     <button id="cycleButton" onclick="toggleCycle()">Start Cycle</button>
 
     <br>
 
-    <input type="text" id="taskInput" placeholder="Enter a task">
+    <input type="text" id="taskInput" onkeydown="submitTaskOnEnter(event)" placeholder="Enter a task">
     <button onclick="addTask()">Add Task</button>
     <button onclick="exportTasks()">Export Tasks</button>
+    <button onclick="toggleInfo()">Toggle Stats</button>
 
     <ul id="taskList"></ul>
+
+    <div id="info">
+        <p>Elapsed Time: <span id="elapsedTime">0</span> minute(s)</p>
+        <p>Cycle Count: <span id="cycleCount">0</span></p>
+    </div>
 
     <audio id="rainbowSound">
         <source src="chirp.mp3" type="audio/mp3">
         Your browser does not support the audio element.
     </audio>
 
+    <div id="footer">
+        <div id="watermark">
+            Made with love <a href="https://valdi-via.com" target="_blank" style="color:#aaaaaa;">valdi-via.com</a>
+        </div>
+        <button id="howToUseButton" onclick="toggleVisibility('howToUseContent')">How to Use</button>
+    </div>
+
+    <div id="howToUseContent">
+        <h3>Features</h3>
+        <ul>
+            <li><b>Color Cycles:</b> Set intervals to switch between colors, using redirection of focus through color change.</li>
+            <li><b>Sound Alerts:</b> Choose auditory cues like "Chirp" or "Bell" for transition notifications.</li>
+            <li><b>Task Management:</b> Add tasks to your list and keep track of them by marking as completed.</li>
+            <li><b>Task Export:</b> Export your tasks as a timestamped text file for record-keeping.</li>
+            <li><b>Dynamic Information:</b> Toggle display for elapsed time and cycle count statistics.</li>
+        </ul>
+        <h3>Why Use It?</h3>
+        <p>The rhythmic cycle of colors coupled with sound alerts helps bring back your attention. Easily manage and reflect on tasks with a simple interface. It is particularly beneficial for individuals who are neurodivergent, offering support in retaining attention and managing workflow.</p>
+        <h3>Getting Started</h3>
+        <ol>
+            <li><b>Configure Sounds and Intervals:</b> Choose a desired sound from the dropdown. Enter interval in minutes for cycle duration.</li>
+            <li><b>Manage Tasks:</b> Enter tasks and press Enter or click "Add Task".</li>
+            <li><b>Start/Stop Cycle:</b> Click "Start Cycle" to begin. The color will change on the specified interval. Click again to stop.</li>
+            <li><b>Toggle Stats:</b> Use the "Toggle Stats" button to view or hide the current session's elapsed time and cycle count.</li>
+        </ol>
+        <p>For more information, visit <a href="https://valdi-via.com" style="color: #53aeff;">valdi-via.com</a>.</p>
+    </div>
+
     <script>
-        const colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"];
+        const colors = [
+            { color: "red", text: "white" },
+            { color: "orange", text: "black" },
+            { color: "yellow", text: "black" },
+            { color: "green", text: "white" },
+            { color: "blue", text: "white" },
+            { color: "indigo", text: "white" },
+            { color: "violet", text: "white" }
+        ];
         let index = 0;
         let interval = null;
+        let elapsedTime = 0;
+        let cycleCount = 0;
 
         function toggleCycle() {
             const button = document.getElementById("cycleButton");
@@ -100,8 +188,13 @@
         function startCycle() {
             const minutes = document.getElementById("minutesInput").value;
             if (minutes > 0) {
+                elapsedTime = 0;
+                cycleCount = 0;
                 changeColorAndPlaySound();
-                interval = setInterval(changeColorAndPlaySound, minutes * 60000);
+                interval = setInterval(() => {
+                    changeColorAndPlaySound();
+                    document.getElementById("elapsedTime").textContent = ++elapsedTime;
+                }, minutes * 60000);
             } else {
                 alert("Please enter a positive number.");
             }
@@ -111,11 +204,16 @@
             clearInterval(interval);
             interval = null;
             document.body.style.backgroundColor = "#121212"; // Reset to default
+            document.body.style.color = "#ffffff";
         }
 
         function changeColorAndPlaySound() {
             index = (index + 1) % colors.length;
-            document.body.style.backgroundColor = colors[index];
+            cycleCount++;
+            const currentColor = colors[index];
+            document.body.style.backgroundColor = currentColor.color;
+            document.body.style.color = currentColor.text;
+            document.getElementById("cycleCount").textContent = cycleCount;
 
             const soundFile = document.getElementById("soundSelect").value;
             const audio = document.getElementById("rainbowSound");
@@ -144,6 +242,12 @@
             }
         }
 
+        function submitTaskOnEnter(event) {
+            if (event.key === "Enter") {
+                addTask();
+            }
+        }
+
         function exportTasks() {
             const taskList = document.getElementById("taskList");
             const tasks = Array.from(taskList.children).map(li => li.textContent);
@@ -164,7 +268,12 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        function toggleInfo() {
+            toggleVisibility('info');
+        }
     </script>
 
 </body>
 </html>
+
